@@ -1,0 +1,75 @@
+FROM ubuntu:jammy
+
+ARG TZ=Europe/London
+ENV TZ=${TZ}
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update &&\
+ yes | unminimize
+
+# dev tools
+RUN apt-get -y install \
+ binutils-doc \
+ cpp-doc \
+ gcc-doc \
+ g++ \
+ g++-multilib \
+ gdb \
+ gdb-doc \
+ glibc-doc \
+ make \
+ make-doc \
+ clang \
+ clang-14-doc \
+ lldb \
+ cmake \
+ qemu-system-x86
+
+# utilities
+RUN apt-get -y install \
+ linux-tools-generic \
+ strace \
+ bc \
+ curl \
+ dc
+
+# editors, misc
+RUN apt-get -y install \
+ emacs \
+ git \
+ git-doc \
+ man \
+ micro \
+ nano \
+ psmisc \
+ sudo \
+ vim \
+ wget \
+ libreadline-dev \
+ locales
+
+# create user "user"; no password needed for sudo
+RUN useradd -m -s /bin/bash user && \
+ echo "user ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/0019-init
+
+# human name and email address of student; change to your own; note backslash
+# required before space between first and last names in USER!
+ARG USER=0019\ User
+ARG EMAIL=nobody@ucl.ac.uk
+
+# user configuration; set up .bash_profile
+USER user
+RUN git config --global user.name "${USER}" && \
+ git config --global user.email "${EMAIL}" && \
+ cat /dev/null > ~/.bash_profile && \
+ echo "ls -al > /dev/null" >> ~/.bash_profile && \
+ echo "for i in \`mount | grep /home/user | sed 's/^.*\\(\\/home[^ ]*\\).*/\\\\1/'\`; do ls -al \$i > /dev/null ; done" >> ~/.bash_profile && \
+ (echo "if test -e /run/host-services/ssh-auth.sock; then"; echo "  sudo chown user:user /run/host-services/ssh-auth.sock"; echo "fi") >> ~/.bash_profile && \
+ rm -f ~/.bash_logout && \
+ echo "add-auto-load-safe-path ~" > ~/.gdbinit
+
+WORKDIR /home/user
+CMD ["/bin/bash", "-l"]
+
+# closely based on a Dockerfile first contributed by Harvard DCE student
+# Todd Morrill, extended by Eddie Kohler, and adapted by UCL CS 0019 staff
